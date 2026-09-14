@@ -4,6 +4,7 @@ import os
 import smtplib
 from email.message import EmailMessage
 from playwright.sync_api import sync_playwright
+from datetime import datetime
 
 # Load email credentials from GitHub Secrets
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
@@ -64,7 +65,6 @@ def scrape_jobs():
                 page = browser.new_page()
                 page.goto(company["url"], timeout=20000, wait_until="domcontentloaded")
                 
-                # General approach to extract all links on the career page
                 links = page.eval_on_selector_all("a", """elements => elements.map(e => {
                     return {title: e.innerText || e.textContent, href: e.href}
                 })""")
@@ -87,21 +87,32 @@ def scrape_jobs():
                 
         browser.close()
 
-    # Deduplicate in case the page has multiple links (like a logo and text) pointing to the same job
     unique_results = [dict(t) for t in {tuple(d.items()) for d in results}]
     return unique_results
 
 def send_email(job_data):
-    # Format exactly as requested: a single JSON array
     json_output = json.dumps(job_data, indent=2)
+    
+    # Create the dynamic file name with the current month and day
+    current_date = datetime.now().strftime("%m_%d")
+    filename = f"job_scan_week_{current_date}_via_github.json"
     
     msg = EmailMessage()
     msg['Subject'] = f"Weekly PM Jobs Scan: {len(job_data)} found"
     msg['From'] = SENDER_EMAIL
     msg['To'] = RECEIVER_EMAIL
-    msg.set_content(json_output)
     
-    # Using Gmail's SMTP server (we will set this up in the next step)
+    # Set a short message for the email body
+    msg.set_content(f"Your weekly scan is complete. Found {len(job_data)} PM roles. The JSON file is attached.")
+    
+    # Attach the JSON data as a downloadable file
+    msg.add_attachment(
+        json_output.encode('utf-8'), 
+        maintype='application', 
+        subtype='json', 
+        filename=filename
+    )
+    
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(SENDER_EMAIL, EMAIL_PASSWORD)
         smtp.send_message(msg)
