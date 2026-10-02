@@ -1,8 +1,10 @@
 name: Weekly PM Job Scraper
 
 on:
-  schedule:
-    - cron: '0 17 * * 1,3' # Runs at 12:00 PM EST (17:00 UTC) every Monday and Wednesday
+  # Scheduled run disabled Oct 2026 — superseded by a Cowork-based daily scan
+  # (application-tracker repo). Kept as a manual-only fallback below.
+  # schedule:
+  #   - cron: '0 17 * * 1,3' # was 12:00 PM EST (17:00 UTC) every Monday and Wednesday
   workflow_dispatch: # Allows manual runs
 
 jobs:
